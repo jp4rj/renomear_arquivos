@@ -1,22 +1,19 @@
 // ============================================
-// Configuração do pdf.js
+// Configuração do pdf.js (worker compatível com v3)
 // ============================================
 pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js";
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+console.log("✅ app.js carregado");
 
 // ============================================
-// Padrões de extração do nome (mesma lógica do Python)
+// Padrões de extração do nome
 // ============================================
 const PADROES_NOME = [
-  // "Declaro que NOME ..."
   /[Dd]eclaro(?:\s+para\s+os\s+devidos\s+fins)?,?\s+que\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})/,
-  // "eu, NOME, ..."
   /\beu,?\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})/,
-  // "Nome: NOME" / "Nome completo: NOME"
   /Nome(?:\s+completo)?[:\-]\s*([A-ZÀ-Ú][^\n]{3,60})/,
-  // "Declarante NOME"
   /[Dd]eclarante[:\-]?\s+([A-ZÀ-Ú][^\n]{3,60})/,
-  // Nome logo acima do CPF (assinatura)
   /([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})\s*\n\s*CPF[:\s]*\d{3}\.\d{3}\.\d{3}-\d{2}/,
 ];
 
@@ -27,19 +24,22 @@ const PALAVRAS_PROIBIDAS = new Set([
 ]);
 
 // ============================================
-// Funções de extração
+// Extração
 // ============================================
 async function lerPdf(file) {
+  console.log("📖 Lendo:", file.name);
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  console.log("   páginas:", pdf.numPages);
 
   let texto = "";
-  const totalPaginas = Math.min(pdf.numPages, 5); // só as 5 primeiras
+  const totalPaginas = Math.min(pdf.numPages, 5);
   for (let i = 1; i <= totalPaginas; i++) {
     const pagina = await pdf.getPage(i);
     const conteudo = await pagina.getTextContent();
     texto += conteudo.items.map(item => item.str).join(" ") + "\n";
   }
+  console.log("   texto (início):", texto.slice(0, 200));
   return texto;
 }
 
@@ -68,7 +68,7 @@ function extrairNome(texto) {
     }
   }
 
-  // Fallback: nome na assinatura (últimas linhas)
+  // Fallback: última linha capitalizada antes do fim
   const linhas = texto.split("\n").map(l => l.trim()).filter(Boolean);
   const ultimas = linhas.slice(-15);
   for (let i = ultimas.length - 1; i >= 0; i--) {
@@ -93,10 +93,10 @@ function sanitizarNome(nome) {
 }
 
 // ============================================
-// Estado da aplicação
+// Estado
 // ============================================
 const estado = {
-  arquivos: [], // { file, nomeOriginal, nomeExtraido, aprovado, novoNome }
+  arquivos: [],
 };
 
 // ============================================
@@ -139,15 +139,17 @@ dropzone.addEventListener("drop", e => {
 });
 
 inputArquivos.addEventListener("change", e => {
+  console.log("📁 Arquivos selecionados:", e.target.files.length);
   const arquivos = Array.from(e.target.files);
   if (arquivos.length) processarArquivos(arquivos);
-  inputArquivos.value = ""; // permite re-selecionar os mesmos
+  inputArquivos.value = "";
 });
 
 // ============================================
-// Processamento em lote
+// Processamento
 // ============================================
 async function processarArquivos(arquivos) {
+  console.log("🚀 Processando", arquivos.length, "arquivo(s)");
   progressoContainer.classList.remove("oculto");
   tabelaContainer.classList.remove("oculto");
 
@@ -199,11 +201,10 @@ function atualizarProgresso(atual, total) {
 }
 
 // ============================================
-// Renderização da tabela
+// Tabela
 // ============================================
 function adicionarLinhaTabela(item) {
   const tr = document.createElement("tr");
-  const idx = estado.arquivos.indexOf(item);
 
   tr.innerHTML = `
     <td class="col-check">

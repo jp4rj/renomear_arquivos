@@ -10,10 +10,22 @@ console.log("✅ app.js carregado");
 // Padrões de extração do nome
 // ============================================
 const PADROES_NOME = [
+  // ✅ Eleitor(a): NOME EM CAIXA ALTA (declaração do TRE)
+  /Eleitor\(?a?\)?\s*[:\-]\s*([A-ZÀ-Ú][A-ZÀ-Ú\s]{4,80})/,
+
+  // "Declaro que NOME ..."
   /[Dd]eclaro(?:\s+para\s+os\s+devidos\s+fins)?,?\s+que\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})/,
+
+  // "eu, NOME, ..."
   /\beu,?\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})/,
+
+  // "Nome: NOME" / "Nome completo: NOME"
   /Nome(?:\s+completo)?[:\-]\s*([A-ZÀ-Ú][^\n]{3,60})/,
+
+  // "Declarante NOME"
   /[Dd]eclarante[:\-]?\s+([A-ZÀ-Ú][^\n]{3,60})/,
+
+  // Nome logo acima do CPF (assinatura)
   /([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})\s*\n\s*CPF[:\s]*\d{3}\.\d{3}\.\d{3}-\d{2}/,
 ];
 
@@ -39,7 +51,7 @@ async function lerPdf(file) {
     const conteudo = await pagina.getTextContent();
     texto += conteudo.items.map(item => item.str).join(" ") + "\n";
   }
-  console.log("   texto (início):", texto.slice(0, 200));
+  console.log("   texto (início):", texto.slice(0, 300));
   return texto;
 }
 
@@ -51,7 +63,12 @@ function nomeValido(nome) {
   const partes = n.split(/\s+/);
   if (partes.length < 2) return false;
 
-  if (partes.some(p => PALAVRAS_PROIBIDAS.has(p))) return false;
+  // Verificação de palavras proibidas (case-insensitive)
+  const partesNorm = partes.map(p =>
+    p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
+  );
+  if (partesNorm.some(p => PALAVRAS_PROIBIDAS.has(p))) return false;
+
   if (/\d/.test(n)) return false;
 
   return true;
@@ -63,7 +80,15 @@ function extrairNome(texto) {
   for (const padrao of PADROES_NOME) {
     const matches = textoNorm.matchAll(new RegExp(padrao, "g"));
     for (const m of matches) {
-      const nome = m[1].replace(/\s+/g, " ").trim();
+      let nome = m[1].replace(/\s+/g, " ").trim();
+
+      // Se capturou "ANA PEQUENO BANDEIRA DE MELLO CPF:" corta no " CPF"
+      nome = nome.replace(/\s+CPF.*$/i, "");
+      nome = nome.replace(/\s+CPF:.*$/i, "");
+      // corta em qualquer coisa que pareça rótulo
+      nome = nome.replace(/\s+(Eleição|Eleitor|CPF|Título|RG|Data).*$/i, "");
+      nome = nome.trim();
+
       if (nomeValido(nome)) return nome;
     }
   }
@@ -82,13 +107,13 @@ function extrairNome(texto) {
 }
 
 function sanitizarNome(nome) {
+  // Preserva caixa alta, só limpa caracteres inválidos para arquivo
   return nome
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")   // remove acentos
     .replace(/[^\w\s\-]/g, "")         // só letras/números/espaço/hífen
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/\b\w/g, c => c.toUpperCase()) // Title Case
     .slice(0, 80);
 }
 
@@ -161,6 +186,7 @@ async function processarArquivos(arquivos) {
     try {
       const texto = await lerPdf(file);
       const nome = extrairNome(texto);
+      console.log("   nome extraído:", nome || "(vazio)");
 
       const item = {
         file,

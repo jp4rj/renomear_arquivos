@@ -122,10 +122,50 @@ const btnAprovarTodos = document.getElementById("aprovar-todos");
 const btnDesmarcarTodos = document.getElementById("desmarcar-todos");
 const btnLimpar = document.getElementById("limpar");
 
-// ✅ NOVO: campos de prefixo/sufixo
 const inputPrefixo = document.getElementById("prefixo");
 const inputSufixo = document.getElementById("sufixo");
 const btnLimparAfixos = document.getElementById("limpar-afixos");
+
+// ✅ NOVO
+const btnTema = document.getElementById("btn-tema");
+const iconeTema = btnTema.querySelector(".icone-tema");
+
+// ============================================
+// ✅ Tema (claro/escuro)
+// ============================================
+function temaAtual() {
+  const atributo = document.documentElement.getAttribute("data-tema");
+  if (atributo === "escuro" || atributo === "claro") return atributo;
+
+  // Sem preferência salva → segue o sistema
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "escuro"
+    : "claro";
+}
+
+function aplicarIconeTema() {
+  const tema = temaAtual();
+  iconeTema.textContent = tema === "escuro" ? "☀️" : "🌙";
+  btnTema.title = tema === "escuro"
+    ? "Mudar para tema claro"
+    : "Mudar para tema escuro";
+}
+
+function alternarTema() {
+  const novo = temaAtual() === "escuro" ? "claro" : "escuro";
+  document.documentElement.setAttribute("data-tema", novo);
+  localStorage.setItem("tema", novo);
+  aplicarIconeTema();
+  console.log("🎨 Tema:", novo);
+}
+
+btnTema.addEventListener("click", alternarTema);
+aplicarIconeTema();
+
+// Se o usuário não escolheu manualmente, acompanha mudanças no sistema
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (!localStorage.getItem("tema")) aplicarIconeTema();
+});
 
 // ============================================
 // Drag & drop
@@ -158,7 +198,6 @@ inputArquivos.addEventListener("change", e => {
   inputArquivos.value = "";
 });
 
-// ✅ NOVO: listeners dos afixos
 inputPrefixo.addEventListener("input", () => {
   estado.prefixo = inputPrefixo.value;
   reconstruirTodosNovosNomes();
@@ -200,11 +239,11 @@ async function processarArquivos(arquivos) {
         nomeOriginal: file.name,
         nomeExtraido: nome,
         aprovado: !!nome,
-        novoNome: "",       // recalculado abaixo
+        novoNome: "",
       };
       estado.arquivos.push(item);
       adicionarLinhaTabela(item);
-      atualizarNovoNomeItem(item);   // ✅ aplica prefixo/sufixo atuais
+      atualizarNovoNomeItem(item);
     } catch (err) {
       console.error("Erro ao ler", file.name, err);
       const item = {
@@ -239,7 +278,7 @@ function atualizarProgresso(atual, total) {
 // ============================================
 function adicionarLinhaTabela(item) {
   const tr = document.createElement("tr");
-  item._tr = tr;   // ✅ guarda referência para atualizar depois
+  item._tr = tr;
 
   tr.innerHTML = `
     <td class="col-check">
@@ -265,14 +304,11 @@ function adicionarLinhaTabela(item) {
     atualizarNovoNomeItem(item);
   });
 
-  item._inputNome = inputNome;   // ✅ guarda referência
+  item._inputNome = inputNome;
 
   tabelaCorpo.appendChild(tr);
 }
 
-// ============================================
-// ✅ NOVO: cálculo do novo nome com prefixo/sufixo
-// ============================================
 function atualizarNovoNomeItem(item) {
   const celulaNovo = item._tr.querySelector(".celula-novo");
   const nomeBase = (item.nomeExtraido || "").trim();
@@ -287,7 +323,6 @@ function atualizarNovoNomeItem(item) {
   const sufixo = sanitizarNome(estado.sufixo || "");
   const base = sanitizarNome(nomeBase);
 
-  // monta: [prefixo ][BASE][ sufixo].pdf
   let final = base;
   if (prefixo) final = prefixo + " " + final;
   if (sufixo) final = final + " " + sufixo;

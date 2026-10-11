@@ -391,4 +391,178 @@ function atualizarNovoNomeItem(item) {
 
   const prefixo = sanitizarNome(estado.prefixo || "");
   const sufixo = sanitizarNome(estado.sufixo || "");
-  const base
+  const base = sanitizarNome(nomeBase);
+
+  let final = base;
+  if (prefixo) final = prefixo + " " + final;
+  if (sufixo) final = final + " " + sufixo;
+
+  final = final.replace(/\s+/g, " ").trim();
+
+  item.novoNome = final + ".pdf";
+  celulaNovo.textContent = item.novoNome;
+}
+
+function reconstruirTodosNovosNomes() {
+  estado.arquivos.forEach(item => {
+    if (item._tr) atualizarNovoNomeItem(item);
+  });
+}
+
+function escaparHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ============================================
+// Ações em massa
+// ============================================
+btnAprovarTodos.addEventListener("click", () => {
+  estado.arquivos.forEach(item => {
+    if (item.novoNome) item.aprovado = true;
+  });
+  sincronizarCheckboxes();
+});
+
+btnDesmarcarTodos.addEventListener("click", () => {
+  estado.arquivos.forEach(item => item.aprovado = false);
+  sincronizarCheckboxes();
+});
+
+// ✅ Novos: proteger/desproteger em massa
+btnProtegerTodos.addEventListener("click", () => {
+  estado.arquivos.forEach(item => {
+    item.proteger = true;
+    if (item._checkProteger) item._checkProteger.checked = true;
+    aplicarEstadoProtecao(item);
+    atualizarEstadoSenha(item);
+  });
+  atualizarInfoDownload();
+});
+
+btnDesprotegerTodos.addEventListener("click", () => {
+  estado.arquivos.forEach(item => {
+    item.proteger = false;
+    if (item._checkProteger) item._checkProteger.checked = false;
+    aplicarEstadoProtecao(item);
+    atualizarEstadoSenha(item);
+  });
+  atualizarInfoDownload();
+});
+
+function sincronizarCheckboxes() {
+  estado.arquivos.forEach(item => {
+    const cb = item._tr.querySelector('.check-aprovado');
+    cb.checked = item.aprovado;
+  });
+}
+
+btnLimpar.addEventListener("click", () => {
+  estado.arquivos = [];
+  tabelaCorpo.innerHTML = "";
+  tabelaContainer.classList.add("oculto");
+  progressoContainer.classList.add("oculto");
+  infoDownload.textContent = "";
+});
+
+// ============================================
+// Info dinâmica embaixo do botão
+// ============================================
+function atualizarInfoDownload() {
+  const aprovados = estado.arquivos.filter(it => it.aprovado && it.novoNome);
+  const protegidos = aprovados.filter(it => it.proteger);
+
+  if (!aprovados.length) {
+    infoDownload.textContent = "";
+    return;
+  }
+
+  if (!protegidos.length) {
+    infoDownload.textContent =
+      `${aprovados.length} arquivo(s) serão baixados (sem senha).`;
+  } else {
+    infoDownload.textContent =
+      `${aprovados.length} arquivo(s) • ${protegidos.length} com senha no CSV.`;
+  }
+}
+
+// ============================================
+// Download em .zip (com senhas.csv opcional)
+// ============================================
+btnBaixarZip.addEventListener("click", async () => {
+  const aprovados = estado.arquivos.filter(
+    item => item.aprovado && item.novoNome
+  );
+
+  if (!aprovados.length) {
+    alert("Nenhum arquivo marcado com nome válido.");
+    return;
+  }
+
+  const protegidos = aprovados.filter(it => it.proteger);
+
+  // Valida senhas dos que estão marcados para proteger
+  const semSenhaValida = protegidos.filter(it => !it.senha || it.senha.length !== 11);
+  if (semSenhaValida.length) {
+    const nomes = semSenhaValida.map(it => "• " + it.nomeOriginal).join("\n");
+    alert(
+      `⚠️ ${semSenhaValida.length} arquivo(s) marcado(s) com 🔒 estão sem CPF válido (11 dígitos):\n\n` +
+      nomes + "\n\nCorrija ou desmarque antes de baixar."
+    );
+    return;
+  }
+
+  btnBaixarZip.disabled = true;
+  btnBaixarZip.textContent = "Gerando .zip...";
+
+  const zip = new JSZip();
+  const usados = new Set();
+
+  // Mapa para o senhas.csv: nome_final → senha
+  const linhasCsv = [];
+  linhasCsv.push("arquivo,senha"); // cabeçalho
+
+  for (const item of aprovados) {
+    let nomeFinal = item.novoNome;
+    let contador = 2;
+    while (usados.has(nomeFinal)) {
+      const base = nomeFinal.replace(/\.pdf$/i, "");
+      nomeFinal = `${base}_${contador}.pdf`;
+      contador++;
+    }
+    usados.add(nomeFinal);
+
+    const buffer = await item.file.arrayBuffer();
+    zip.file(nomeFinal, buffer);
+
+    // Só inclui no CSV se estiver marcado como protegido
+    if (item.proteger) {
+      linhasCsv.push(`${nomeFinal},${item.senha}`);
+    }
+  }
+
+  // Adiciona o senhas.csv SÓ se houver pelo menos um protegido
+  if (protegidos.length) {
+    const csv = linhasCsv.join("\n") + "\n";
+    zip.file("senhas.csv", csv);
+    console.log(`📄 senhas.csv gerado com ${protegidos.length} linha(s)`);
+  } else {
+    console.log("ℹ️ Nenhum arquivo marcado para proteção — CSV não gerado.");
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "declaracoes-renomeadas.zip";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  btnBaixarZip.disabled = false;
+  btnBaixarZip.textContent = "📦 Baixar (.zip)";
+});

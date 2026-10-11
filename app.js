@@ -25,7 +25,26 @@ const PALAVRAS_PROIBIDAS = new Set([
 ]);
 
 // ============================================
-// Extração
+// Extração de CPF
+// ============================================
+const REGEX_CPF_PONTUADO = /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g;
+
+function extrairCpfDigitos(texto) {
+  const matches = texto.match(REGEX_CPF_PONTUADO);
+  if (matches && matches.length) return soDigitos(matches[0]);
+
+  const m = texto.match(/(?<!\d)\d{11}(?!\d)/);
+  if (m) return m[0];
+
+  return "";
+}
+
+function soDigitos(s) {
+  return (s || "").replace(/\D/g, "");
+}
+
+// ============================================
+// Leitura de PDF
 // ============================================
 async function lerPdf(file) {
   console.log("📖 Lendo:", file.name);
@@ -40,10 +59,12 @@ async function lerPdf(file) {
     const conteudo = await pagina.getTextContent();
     texto += conteudo.items.map(item => item.str).join(" ") + "\n";
   }
-  console.log("   texto (início):", texto.slice(0, 300));
   return texto;
 }
 
+// ============================================
+// Extração de nome
+// ============================================
 function nomeValido(nome) {
   if (!nome) return false;
   const n = nome.trim();
@@ -56,9 +77,7 @@ function nomeValido(nome) {
     p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
   );
   if (partesNorm.some(p => PALAVRAS_PROIBIDAS.has(p))) return false;
-
   if (/\d/.test(n)) return false;
-
   return true;
 }
 
@@ -71,7 +90,6 @@ function extrairNome(texto) {
       let nome = m[1].replace(/\s+/g, " ").trim();
       nome = nome.replace(/\s+CPF.*$/i, "").trim();
       nome = nome.replace(/\s+(Eleição|Eleitor|Título|RG|Data).*$/i, "").trim();
-
       if (nomeValido(nome)) return nome;
     }
   }
@@ -120,35 +138,30 @@ const tabelaCorpo = document.querySelector("#tabela tbody");
 const btnBaixarZip = document.getElementById("baixar-zip");
 const btnAprovarTodos = document.getElementById("aprovar-todos");
 const btnDesmarcarTodos = document.getElementById("desmarcar-todos");
+const btnProtegerTodos = document.getElementById("proteger-todos");
+const btnDesprotegerTodos = document.getElementById("desproteger-todos");
 const btnLimpar = document.getElementById("limpar");
+const infoDownload = document.getElementById("info-download");
 
 const inputPrefixo = document.getElementById("prefixo");
 const inputSufixo = document.getElementById("sufixo");
 const btnLimparAfixos = document.getElementById("limpar-afixos");
 
-// ✅ NOVO
 const btnTema = document.getElementById("btn-tema");
 const iconeTema = btnTema.querySelector(".icone-tema");
 
 // ============================================
-// ✅ Tema (claro/escuro)
+// Tema
 // ============================================
 function temaAtual() {
   const atributo = document.documentElement.getAttribute("data-tema");
   if (atributo === "escuro" || atributo === "claro") return atributo;
-
-  // Sem preferência salva → segue o sistema
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "escuro"
-    : "claro";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
 }
 
 function aplicarIconeTema() {
   const tema = temaAtual();
   iconeTema.textContent = tema === "escuro" ? "☀️" : "🌙";
-  btnTema.title = tema === "escuro"
-    ? "Mudar para tema claro"
-    : "Mudar para tema escuro";
 }
 
 function alternarTema() {
@@ -156,16 +169,10 @@ function alternarTema() {
   document.documentElement.setAttribute("data-tema", novo);
   localStorage.setItem("tema", novo);
   aplicarIconeTema();
-  console.log("🎨 Tema:", novo);
 }
 
 btnTema.addEventListener("click", alternarTema);
 aplicarIconeTema();
-
-// Se o usuário não escolheu manualmente, acompanha mudanças no sistema
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if (!localStorage.getItem("tema")) aplicarIconeTema();
-});
 
 // ============================================
 // Drag & drop
@@ -192,7 +199,6 @@ dropzone.addEventListener("drop", e => {
 });
 
 inputArquivos.addEventListener("change", e => {
-  console.log("📁 Arquivos selecionados:", e.target.files.length);
   const arquivos = Array.from(e.target.files);
   if (arquivos.length) processarArquivos(arquivos);
   inputArquivos.value = "";
@@ -232,12 +238,15 @@ async function processarArquivos(arquivos) {
     try {
       const texto = await lerPdf(file);
       const nome = extrairNome(texto);
-      console.log("   nome extraído:", nome || "(vazio)");
+      const cpf = extrairCpfDigitos(texto);
+      console.log("   nome:", nome || "(vazio)", "| cpf:", cpf || "(vazio)");
 
       const item = {
         file,
         nomeOriginal: file.name,
         nomeExtraido: nome,
+        senha: cpf,
+        proteger: false,      // 🔒 por padrão NÃO protege
         aprovado: !!nome,
         novoNome: "",
       };
@@ -250,6 +259,8 @@ async function processarArquivos(arquivos) {
         file,
         nomeOriginal: file.name,
         nomeExtraido: "",
+        senha: "",
+        proteger: false,
         aprovado: false,
         novoNome: "",
         erro: true,
@@ -265,6 +276,8 @@ async function processarArquivos(arquivos) {
   setTimeout(() => {
     progressoContainer.classList.add("oculto");
   }, 800);
+
+  atualizarInfoDownload();
 }
 
 function atualizarProgresso(atual, total) {
@@ -282,7 +295,11 @@ function adicionarLinhaTabela(item) {
 
   tr.innerHTML = `
     <td class="col-check">
-      <input type="checkbox" ${item.aprovado ? "checked" : ""}>
+      <input type="checkbox" class="check-aprovado" ${item.aprovado ? "checked" : ""}>
+    </td>
+    <td class="col-lock">
+      <input type="checkbox" class="check-proteger" ${item.proteger ? "checked" : ""}
+             title="Aplicar senha neste arquivo">
     </td>
     <td>${escaparHtml(item.nomeOriginal)}</td>
     <td>
@@ -290,13 +307,25 @@ function adicionarLinhaTabela(item) {
              placeholder="Nome não encontrado">
     </td>
     <td class="celula-novo"></td>
+    <td>
+      <input type="text" class="senha-input" value="${escaparHtml(item.senha)}"
+             placeholder="CPF sem pontos/traços" disabled>
+    </td>
   `;
 
-  const checkbox = tr.querySelector('input[type="checkbox"]');
-  const inputNome = tr.querySelector('input[type="text"]');
+  const checkAprovado = tr.querySelector(".check-aprovado");
+  const checkProteger = tr.querySelector(".check-proteger");
+  const inputNome = tr.querySelector('input[type="text"]:not(.senha-input)');
+  const inputSenha = tr.querySelector(".senha-input");
 
-  checkbox.addEventListener("change", () => {
-    item.aprovado = checkbox.checked;
+  checkAprovado.addEventListener("change", () => {
+    item.aprovado = checkAprovado.checked;
+  });
+
+  checkProteger.addEventListener("change", () => {
+    item.proteger = checkProteger.checked;
+    aplicarEstadoProtecao(item);
+    atualizarInfoDownload();
   });
 
   inputNome.addEventListener("input", () => {
@@ -304,9 +333,50 @@ function adicionarLinhaTabela(item) {
     atualizarNovoNomeItem(item);
   });
 
+  inputSenha.addEventListener("input", () => {
+    const limpo = soDigitos(inputSenha.value);
+    if (limpo !== inputSenha.value) inputSenha.value = limpo;
+    item.senha = limpo;
+    atualizarEstadoSenha(item);
+  });
+
   item._inputNome = inputNome;
+  item._inputSenha = inputSenha;
+  item._checkProteger = checkProteger;
 
   tabelaCorpo.appendChild(tr);
+  aplicarEstadoProtecao(item);
+  atualizarEstadoSenha(item);
+}
+
+// Quando marcar/desmarcar 🔒, habilita/desabilita o campo de senha
+function aplicarEstadoProtecao(item) {
+  const tr = item._tr;
+  const inputSenha = item._inputSenha;
+
+  if (item.proteger) {
+    tr.classList.add("linha-protegida");
+    inputSenha.disabled = false;
+    inputSenha.classList.remove("senha-desabilitada");
+  } else {
+    tr.classList.remove("linha-protegida");
+    inputSenha.disabled = true;
+    inputSenha.classList.add("senha-desabilitada");
+  }
+}
+
+function atualizarEstadoSenha(item) {
+  if (!item._inputSenha) return;
+  const el = item._inputSenha;
+  el.classList.remove("senha-vazia", "senha-valida");
+
+  if (!item.proteger) return; // só valida visualmente se estiver protegido
+
+  if (!item.senha) {
+    el.classList.add("senha-vazia");
+  } else if (item.senha.length === 11) {
+    el.classList.add("senha-valida");
+  }
 }
 
 function atualizarNovoNomeItem(item) {
@@ -321,104 +391,4 @@ function atualizarNovoNomeItem(item) {
 
   const prefixo = sanitizarNome(estado.prefixo || "");
   const sufixo = sanitizarNome(estado.sufixo || "");
-  const base = sanitizarNome(nomeBase);
-
-  let final = base;
-  if (prefixo) final = prefixo + " " + final;
-  if (sufixo) final = final + " " + sufixo;
-
-  final = final.replace(/\s+/g, " ").trim();
-
-  item.novoNome = final + ".pdf";
-  celulaNovo.textContent = item.novoNome;
-}
-
-function reconstruirTodosNovosNomes() {
-  estado.arquivos.forEach(item => {
-    if (item._tr) atualizarNovoNomeItem(item);
-  });
-}
-
-function escaparHtml(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-// ============================================
-// Ações em massa
-// ============================================
-btnAprovarTodos.addEventListener("click", () => {
-  estado.arquivos.forEach(item => {
-    if (item.novoNome) item.aprovado = true;
-  });
-  sincronizarCheckboxes();
-});
-
-btnDesmarcarTodos.addEventListener("click", () => {
-  estado.arquivos.forEach(item => item.aprovado = false);
-  sincronizarCheckboxes();
-});
-
-function sincronizarCheckboxes() {
-  estado.arquivos.forEach(item => {
-    const cb = item._tr.querySelector('input[type="checkbox"]');
-    cb.checked = item.aprovado;
-  });
-}
-
-btnLimpar.addEventListener("click", () => {
-  estado.arquivos = [];
-  tabelaCorpo.innerHTML = "";
-  tabelaContainer.classList.add("oculto");
-  progressoContainer.classList.add("oculto");
-});
-
-// ============================================
-// Download em .zip
-// ============================================
-btnBaixarZip.addEventListener("click", async () => {
-  const aprovados = estado.arquivos.filter(
-    item => item.aprovado && item.novoNome
-  );
-
-  if (!aprovados.length) {
-    alert("Nenhum arquivo marcado com nome válido.");
-    return;
-  }
-
-  btnBaixarZip.disabled = true;
-  btnBaixarZip.textContent = "Gerando .zip...";
-
-  const zip = new JSZip();
-  const usados = new Set();
-
-  for (const item of aprovados) {
-    let nomeFinal = item.novoNome;
-    let contador = 2;
-    while (usados.has(nomeFinal)) {
-      const base = nomeFinal.replace(/\.pdf$/i, "");
-      nomeFinal = `${base}_${contador}.pdf`;
-      contador++;
-    }
-    usados.add(nomeFinal);
-
-    const buffer = await item.file.arrayBuffer();
-    zip.file(nomeFinal, buffer);
-  }
-
-  const blob = await zip.generateAsync({ type: "blob" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "declaracoes-renomeadas.zip";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  btnBaixarZip.disabled = false;
-  btnBaixarZip.textContent = "📦 Baixar renomeados (.zip)";
-});
+  const base

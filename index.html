@@ -11,9 +11,10 @@
     <header>
       <h1>📄 Renomeador de Declarações</h1>
       <p class="subtitulo">
-        Arraste seus PDFs abaixo. O nome do declarante será extraído automaticamente
-        e você poderá revisar antes de baixar.
+        Arraste seus PDFs abaixo. O nome do declarante será extraído
+        automaticamente e você poderá revisar antes de baixar.
       </p>
+      <p id="aviso-libs" style="color:#b91c1c;font-weight:600;display:none;"></p>
     </header>
 
     <!-- Área de drop -->
@@ -60,11 +61,30 @@
     </div>
   </div>
 
-  <!-- pdf.js (Mozilla) via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.js"></script>
-  <!-- JSZip para gerar o .zip -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- pdf.js versão estável via cdnjs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
+  <!-- JSZip via cdnjs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <!-- App -->
   <script src="app.js"></script>
+
+  <script>
+    // Avisa na tela se alguma lib não carregou
+    window.addEventListener('load', () => {
+      const faltando = [];
+      if (typeof pdfjsLib === 'undefined') faltando.push('pdf.js');
+      if (typeof JSZip === 'undefined') faltando.push('JSZip');
+      if (faltando.length) {
+        const aviso = document.getElementById('aviso-libs');
+        aviso.textContent = '⚠️ Falha ao carregar: ' + faltando.join(', ') +
+                            ' — verifique sua conexão e recarregue.';
+        aviso.style.display = 'block';
+      } else {
+        console.log('✅ Todas as bibliotecas carregaram');
+      }
+    });
+  </script>
 </body>
 </html>

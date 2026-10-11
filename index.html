@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Renomeador de Declarações</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Aplica o tema ANTES da página pintar (evita "flash" branco) -->
   <script>
     (function() {
       const temaSalvo = localStorage.getItem('tema');
@@ -14,7 +13,6 @@
       } else if (temaSalvo === 'claro') {
         document.documentElement.setAttribute('data-tema', 'claro');
       }
-      // Se não tem preferência salva, o CSS usa o sistema automaticamente
     })();
   </script>
 </head>
@@ -25,18 +23,18 @@
         <div>
           <h1>📄 Renomeador de Declarações</h1>
           <p class="subtitulo">
-            Arraste seus PDFs abaixo. O nome do declarante será extraído
-            automaticamente e você poderá revisar antes de baixar.
+            Arraste seus PDFs abaixo. O nome e o CPF serão extraídos
+            automaticamente. Marque 🔒 apenas os arquivos que devem
+            receber senha.
           </p>
         </div>
-        <button id="btn-tema" class="botao-tema" title="Alternar tema claro/escuro" aria-label="Alternar tema">
+        <button id="btn-tema" class="botao-tema" title="Alternar tema" aria-label="Alternar tema">
           <span class="icone-tema">🌙</span>
         </button>
       </div>
       <p id="aviso-libs" style="color:#b91c1c;font-weight:600;display:none;"></p>
     </header>
 
-    <!-- Área de drop -->
     <div id="dropzone" class="dropzone">
       <p>🖱️ Arraste os PDFs aqui</p>
       <p class="ou">ou</p>
@@ -46,16 +44,13 @@
       </label>
     </div>
 
-    <!-- Barra de progresso -->
     <div id="progresso-container" class="progresso-container oculto">
       <div id="progresso-barra" class="progresso-barra"></div>
       <span id="progresso-texto">0/0</span>
     </div>
 
-    <!-- Tabela -->
     <div id="tabela-container" class="oculto">
 
-      <!-- Barra de prefixo/sufixo -->
       <div class="barra-afixos">
         <div class="campo-afixo">
           <label for="prefixo">Antes do nome:</label>
@@ -73,15 +68,20 @@
       <div class="acoes-topo">
         <button id="aprovar-todos" class="botao secundario">✅ Marcar todos</button>
         <button id="desmarcar-todos" class="botao secundario">⬜ Desmarcar todos</button>
+        <span class="separador"></span>
+        <button id="proteger-todos" class="botao secundario">🔒 Proteger todos</button>
+        <button id="desproteger-todos" class="botao secundario">🔓 Desproteger todos</button>
       </div>
 
       <table id="tabela">
         <thead>
           <tr>
             <th class="col-check">✓</th>
+            <th class="col-lock" title="Marcar para aplicar senha">🔒</th>
             <th>Arquivo original</th>
             <th>Nome extraído (editável)</th>
             <th>Novo nome</th>
+            <th>Senha (CPF sem pontuação)</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -89,20 +89,23 @@
 
       <div class="acoes-baixo">
         <button id="baixar-zip" class="botao principal">
-          📦 Baixar renomeados (.zip)
+          📦 Baixar (.zip)
         </button>
         <button id="limpar" class="botao secundario">🗑️ Limpar lista</button>
+        <span id="info-download" class="info-download"></span>
       </div>
+
+      <p class="dica-uso">
+        💡 Arquivos marcados com 🔒 serão listados no <code>senhas.csv</code>
+        (que seu script <code>qpdf</code> usa para aplicar a senha). Os
+        demais vão apenas renomeados no ZIP. Se nenhum estiver marcado,
+        o CSV não é gerado.
+      </p>
     </div>
   </div>
 
-  <!-- pdf.js versão estável via cdnjs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-
-  <!-- JSZip via cdnjs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-  <!-- App -->
   <script src="app.js"></script>
 
   <script>

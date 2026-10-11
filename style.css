@@ -23,6 +23,7 @@
   --sucesso: #059669;
   --sucesso-hover: #047857;
   --erro: #ef4444;
+  --aviso: #f59e0b;
 
   --progresso-bg: #e5e7eb;
   --drop-hover-bg: #eff6ff;
@@ -30,9 +31,6 @@
   --sombra-card: 0 1px 3px rgba(0,0,0,0.06);
 }
 
-/* ============================================
-   Tema escuro — via preferência do sistema
-   ============================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema="claro"]) {
     --bg: #0f172a;
@@ -56,6 +54,7 @@
     --sucesso: #10b981;
     --sucesso-hover: #34d399;
     --erro: #f87171;
+    --aviso: #fbbf24;
 
     --progresso-bg: #334155;
     --drop-hover-bg: #1e293b;
@@ -64,9 +63,6 @@
   }
 }
 
-/* ============================================
-   Tema escuro — escolha manual do usuário
-   ============================================ */
 :root[data-tema="escuro"] {
   --bg: #0f172a;
   --bg-card: #1e293b;
@@ -89,6 +85,7 @@
   --sucesso: #10b981;
   --sucesso-hover: #34d399;
   --erro: #f87171;
+  --aviso: #fbbf24;
 
   --progresso-bg: #334155;
   --drop-hover-bg: #1e293b;
@@ -96,9 +93,6 @@
   --sombra-card: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-/* ============================================
-   Base
-   ============================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -110,12 +104,8 @@ body {
   transition: background 0.25s, color 0.25s;
 }
 
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-}
+.container { max-width: 1250px; margin: 0 auto; }
 
-/* Cabeçalho */
 .cabecalho-topo {
   display: flex;
   justify-content: space-between;
@@ -124,10 +114,7 @@ body {
   margin-bottom: 6px;
 }
 
-header h1 {
-  font-size: 26px;
-  margin-bottom: 6px;
-}
+header h1 { font-size: 26px; margin-bottom: 6px; }
 
 .subtitulo {
   color: var(--texto-mudo);
@@ -135,7 +122,6 @@ header h1 {
   font-size: 14px;
 }
 
-/* Botão de tema */
 .botao-tema {
   background: var(--bg-card);
   border: 1px solid var(--borda);
@@ -152,10 +138,7 @@ header h1 {
   flex-shrink: 0;
 }
 
-.botao-tema:hover {
-  background: var(--bg-sutil);
-  transform: scale(1.05);
-}
+.botao-tema:hover { background: var(--bg-sutil); transform: scale(1.05); }
 
 /* -------- Dropzone -------- */
 .dropzone {
@@ -168,22 +151,13 @@ header h1 {
   cursor: pointer;
 }
 
-.dropzone:hover,
-.dropzone.ativo {
+.dropzone:hover, .dropzone.ativo {
   border-color: var(--primaria);
   background: var(--drop-hover-bg);
 }
 
-.dropzone p {
-  font-size: 16px;
-  color: var(--texto-suave);
-}
-
-.dropzone .ou {
-  margin: 12px 0;
-  font-size: 13px;
-  color: var(--texto-desab);
-}
+.dropzone p { font-size: 16px; color: var(--texto-suave); }
+.dropzone .ou { margin: 12px 0; font-size: 13px; color: var(--texto-desab); }
 
 .botao-escolher {
   display: inline-block;
@@ -196,9 +170,7 @@ header h1 {
   transition: background 0.15s;
 }
 
-.botao-escolher:hover {
-  background: var(--primaria-hover);
-}
+.botao-escolher:hover { background: var(--primaria-hover); }
 
 /* -------- Progresso -------- */
 .progresso-container {
@@ -256,7 +228,7 @@ header h1 {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-width: 220px;
+  min-width: 200px;
 }
 
 .campo-afixo label {
@@ -277,9 +249,7 @@ header h1 {
   transition: border-color 0.15s, box-shadow 0.15s, background 0.25s, color 0.25s;
 }
 
-.campo-afixo input::placeholder {
-  color: var(--texto-desab);
-}
+.campo-afixo input::placeholder { color: var(--texto-desab); }
 
 .campo-afixo input:focus {
   outline: none;
@@ -287,21 +257,24 @@ header h1 {
   box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
 }
 
-.botao.pequeno {
-  padding: 8px 12px;
-  font-size: 13px;
-}
+.botao.pequeno { padding: 8px 12px; font-size: 13px; }
 
 .acoes-topo {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.separador {
+  width: 1px;
+  height: 24px;
+  background: var(--borda);
+  margin: 0 4px;
 }
+
+table { width: 100%; border-collapse: collapse; }
 
 th, td {
   padding: 10px 12px;
@@ -318,10 +291,8 @@ th {
   font-size: 13px;
 }
 
-.col-check {
-  width: 40px;
-  text-align: center;
-}
+.col-check { width: 40px; text-align: center; }
+.col-lock  { width: 44px; text-align: center; }
 
 td input[type="text"] {
   width: 100%;
@@ -335,14 +306,37 @@ td input[type="text"] {
   transition: border-color 0.15s, box-shadow 0.15s, background 0.25s, color 0.25s;
 }
 
-td input[type="text"]::placeholder {
-  color: var(--texto-desab);
-}
+td input[type="text"]::placeholder { color: var(--texto-desab); }
 
 td input[type="text"]:focus {
   outline: none;
   border-color: var(--primaria);
   box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+/* Coluna de senha */
+td input.senha-input {
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+td input.senha-desabilitada {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+td input.senha-vazia {
+  border-color: var(--erro);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+td input.senha-valida {
+  border-color: var(--sucesso);
+}
+
+/* Linhas protegidas ganham leve destaque */
+tr.linha-protegida td {
+  background: rgba(245, 158, 11, 0.04);
 }
 
 .celula-novo {
@@ -353,13 +347,8 @@ td input[type="text"]:focus {
   word-break: break-word;
 }
 
-.sem-nome {
-  color: var(--erro);
-  font-style: italic;
-  font-size: 13px;
-}
+.sem-nome { color: var(--erro); font-style: italic; font-size: 13px; }
 
-/* Checkbox no tema escuro */
 input[type="checkbox"] {
   width: 16px;
   height: 16px;
@@ -379,28 +368,41 @@ input[type="checkbox"] {
   font-family: inherit;
 }
 
-.botao.principal {
-  background: var(--sucesso);
-  color: white;
-}
-
-.botao.principal:hover {
-  background: var(--sucesso-hover);
-}
-
-.botao.secundario {
-  background: var(--bg-botao-sec);
-  color: var(--texto);
-}
-
-.botao.secundario:hover {
-  background: var(--bg-botao-sec-hover);
-}
+.botao.principal { background: var(--sucesso); color: white; }
+.botao.principal:hover { background: var(--sucesso-hover); }
+.botao.secundario { background: var(--bg-botao-sec); color: var(--texto); }
+.botao.secundario:hover { background: var(--bg-botao-sec-hover); }
 
 .acoes-baixo {
   display: flex;
   gap: 10px;
   margin-top: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.info-download {
+  font-size: 13px;
+  color: var(--texto-mudo);
+}
+
+.dica-uso {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--bg-sutil);
+  border-left: 3px solid var(--primaria);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--texto-suave);
+  line-height: 1.5;
+}
+
+.dica-uso code {
+  background: var(--bg-botao-sec);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
 }
 
 .oculto { display: none; }

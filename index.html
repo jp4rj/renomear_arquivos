@@ -33,8 +33,24 @@
       <span id="progresso-texto">0/0</span>
     </div>
 
-    <!-- Tabela de resultados -->
+    <!-- Tabela -->
     <div id="tabela-container" class="oculto">
+
+      <!-- ✅ NOVO: barra de prefixo/sufixo global -->
+      <div class="barra-afixos">
+        <div class="campo-afixo">
+          <label for="prefixo">Antes do nome:</label>
+          <input type="text" id="prefixo" placeholder='Ex: "DTE - "'>
+        </div>
+        <div class="campo-afixo">
+          <label for="sufixo">Depois do nome:</label>
+          <input type="text" id="sufixo" placeholder='Ex: " - Declaração 1T"'>
+        </div>
+        <button id="limpar-afixos" class="botao secundario pequeno" title="Limpar prefixo e sufixo">
+          ✕ Limpar
+        </button>
+      </div>
+
       <div class="acoes-topo">
         <button id="aprovar-todos" class="botao secundario">✅ Marcar todos</button>
         <button id="desmarcar-todos" class="botao secundario">⬜ Desmarcar todos</button>
@@ -71,7 +87,6 @@
   <script src="app.js"></script>
 
   <script>
-    // Avisa na tela se alguma lib não carregou
     window.addEventListener('load', () => {
       const faltando = [];
       if (typeof pdfjsLib === 'undefined') faltando.push('pdf.js');

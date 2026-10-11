@@ -1,5 +1,5 @@
 // ============================================
-// Configuração do pdf.js (worker compatível com v3)
+// Configuração do pdf.js
 // ============================================
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -10,22 +10,11 @@ console.log("✅ app.js carregado");
 // Padrões de extração do nome
 // ============================================
 const PADROES_NOME = [
-  // ✅ Eleitor(a): NOME EM CAIXA ALTA (declaração do TRE)
   /Eleitor\(?a?\)?\s*[:\-]\s*([A-ZÀ-Ú][A-ZÀ-Ú\s]{4,80})/,
-
-  // "Declaro que NOME ..."
   /[Dd]eclaro(?:\s+para\s+os\s+devidos\s+fins)?,?\s+que\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})/,
-
-  // "eu, NOME, ..."
   /\beu,?\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})/,
-
-  // "Nome: NOME" / "Nome completo: NOME"
   /Nome(?:\s+completo)?[:\-]\s*([A-ZÀ-Ú][^\n]{3,60})/,
-
-  // "Declarante NOME"
   /[Dd]eclarante[:\-]?\s+([A-ZÀ-Ú][^\n]{3,60})/,
-
-  // Nome logo acima do CPF (assinatura)
   /([A-ZÀ-Ú][a-zà-ú]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ú][a-zà-ú]+){1,5})\s*\n\s*CPF[:\s]*\d{3}\.\d{3}\.\d{3}-\d{2}/,
 ];
 
@@ -63,7 +52,6 @@ function nomeValido(nome) {
   const partes = n.split(/\s+/);
   if (partes.length < 2) return false;
 
-  // Verificação de palavras proibidas (case-insensitive)
   const partesNorm = partes.map(p =>
     p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
   );
@@ -81,19 +69,13 @@ function extrairNome(texto) {
     const matches = textoNorm.matchAll(new RegExp(padrao, "g"));
     for (const m of matches) {
       let nome = m[1].replace(/\s+/g, " ").trim();
-
-      // Se capturou "ANA PEQUENO BANDEIRA DE MELLO CPF:" corta no " CPF"
-      nome = nome.replace(/\s+CPF.*$/i, "");
-      nome = nome.replace(/\s+CPF:.*$/i, "");
-      // corta em qualquer coisa que pareça rótulo
-      nome = nome.replace(/\s+(Eleição|Eleitor|CPF|Título|RG|Data).*$/i, "");
-      nome = nome.trim();
+      nome = nome.replace(/\s+CPF.*$/i, "").trim();
+      nome = nome.replace(/\s+(Eleição|Eleitor|Título|RG|Data).*$/i, "").trim();
 
       if (nomeValido(nome)) return nome;
     }
   }
 
-  // Fallback: última linha capitalizada antes do fim
   const linhas = texto.split("\n").map(l => l.trim()).filter(Boolean);
   const ultimas = linhas.slice(-15);
   for (let i = ultimas.length - 1; i >= 0; i--) {
@@ -107,11 +89,10 @@ function extrairNome(texto) {
 }
 
 function sanitizarNome(nome) {
-  // Preserva caixa alta, só limpa caracteres inválidos para arquivo
   return nome
     .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")   // remove acentos
-    .replace(/[^\w\s\-]/g, "")         // só letras/números/espaço/hífen
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s\-]/g, "")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 80);
@@ -122,6 +103,8 @@ function sanitizarNome(nome) {
 // ============================================
 const estado = {
   arquivos: [],
+  prefixo: "",
+  sufixo: "",
 };
 
 // ============================================
@@ -138,6 +121,11 @@ const btnBaixarZip = document.getElementById("baixar-zip");
 const btnAprovarTodos = document.getElementById("aprovar-todos");
 const btnDesmarcarTodos = document.getElementById("desmarcar-todos");
 const btnLimpar = document.getElementById("limpar");
+
+// ✅ NOVO: campos de prefixo/sufixo
+const inputPrefixo = document.getElementById("prefixo");
+const inputSufixo = document.getElementById("sufixo");
+const btnLimparAfixos = document.getElementById("limpar-afixos");
 
 // ============================================
 // Drag & drop
@@ -170,6 +158,25 @@ inputArquivos.addEventListener("change", e => {
   inputArquivos.value = "";
 });
 
+// ✅ NOVO: listeners dos afixos
+inputPrefixo.addEventListener("input", () => {
+  estado.prefixo = inputPrefixo.value;
+  reconstruirTodosNovosNomes();
+});
+
+inputSufixo.addEventListener("input", () => {
+  estado.sufixo = inputSufixo.value;
+  reconstruirTodosNovosNomes();
+});
+
+btnLimparAfixos.addEventListener("click", () => {
+  inputPrefixo.value = "";
+  inputSufixo.value = "";
+  estado.prefixo = "";
+  estado.sufixo = "";
+  reconstruirTodosNovosNomes();
+});
+
 // ============================================
 // Processamento
 // ============================================
@@ -193,10 +200,11 @@ async function processarArquivos(arquivos) {
         nomeOriginal: file.name,
         nomeExtraido: nome,
         aprovado: !!nome,
-        novoNome: nome ? sanitizarNome(nome) + ".pdf" : "",
+        novoNome: "",       // recalculado abaixo
       };
       estado.arquivos.push(item);
       adicionarLinhaTabela(item);
+      atualizarNovoNomeItem(item);   // ✅ aplica prefixo/sufixo atuais
     } catch (err) {
       console.error("Erro ao ler", file.name, err);
       const item = {
@@ -231,6 +239,7 @@ function atualizarProgresso(atual, total) {
 // ============================================
 function adicionarLinhaTabela(item) {
   const tr = document.createElement("tr");
+  item._tr = tr;   // ✅ guarda referência para atualizar depois
 
   tr.innerHTML = `
     <td class="col-check">
@@ -246,18 +255,6 @@ function adicionarLinhaTabela(item) {
 
   const checkbox = tr.querySelector('input[type="checkbox"]');
   const inputNome = tr.querySelector('input[type="text"]');
-  const celulaNovo = tr.querySelector(".celula-novo");
-
-  const atualizarCelulaNovo = () => {
-    if (!inputNome.value.trim()) {
-      celulaNovo.innerHTML = '<span class="sem-nome">sem nome</span>';
-      item.novoNome = "";
-      return;
-    }
-    const s = sanitizarNome(inputNome.value);
-    item.novoNome = s + ".pdf";
-    celulaNovo.textContent = item.novoNome;
-  };
 
   checkbox.addEventListener("change", () => {
     item.aprovado = checkbox.checked;
@@ -265,11 +262,46 @@ function adicionarLinhaTabela(item) {
 
   inputNome.addEventListener("input", () => {
     item.nomeExtraido = inputNome.value;
-    atualizarCelulaNovo();
+    atualizarNovoNomeItem(item);
   });
 
-  atualizarCelulaNovo();
+  item._inputNome = inputNome;   // ✅ guarda referência
+
   tabelaCorpo.appendChild(tr);
+}
+
+// ============================================
+// ✅ NOVO: cálculo do novo nome com prefixo/sufixo
+// ============================================
+function atualizarNovoNomeItem(item) {
+  const celulaNovo = item._tr.querySelector(".celula-novo");
+  const nomeBase = (item.nomeExtraido || "").trim();
+
+  if (!nomeBase) {
+    celulaNovo.innerHTML = '<span class="sem-nome">sem nome</span>';
+    item.novoNome = "";
+    return;
+  }
+
+  const prefixo = sanitizarNome(estado.prefixo || "");
+  const sufixo = sanitizarNome(estado.sufixo || "");
+  const base = sanitizarNome(nomeBase);
+
+  // monta: [prefixo ][BASE][ sufixo].pdf
+  let final = base;
+  if (prefixo) final = prefixo + " " + final;
+  if (sufixo) final = final + " " + sufixo;
+
+  final = final.replace(/\s+/g, " ").trim();
+
+  item.novoNome = final + ".pdf";
+  celulaNovo.textContent = item.novoNome;
+}
+
+function reconstruirTodosNovosNomes() {
+  estado.arquivos.forEach(item => {
+    if (item._tr) atualizarNovoNomeItem(item);
+  });
 }
 
 function escaparHtml(s) {
@@ -296,10 +328,9 @@ btnDesmarcarTodos.addEventListener("click", () => {
 });
 
 function sincronizarCheckboxes() {
-  const linhas = tabelaCorpo.querySelectorAll("tr");
-  linhas.forEach((tr, i) => {
-    const cb = tr.querySelector('input[type="checkbox"]');
-    cb.checked = estado.arquivos[i].aprovado;
+  estado.arquivos.forEach(item => {
+    const cb = item._tr.querySelector('input[type="checkbox"]');
+    cb.checked = item.aprovado;
   });
 }
 

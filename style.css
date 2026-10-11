@@ -104,6 +104,53 @@ header h1 {
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
+/* ✅ NOVO: barra de prefixo/sufixo */
+.barra-afixos {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.campo-afixo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 220px;
+}
+
+.campo-afixo label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.campo-afixo input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.campo-afixo input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
+
+.botao.pequeno {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
 .acoes-topo {
   display: flex;
   gap: 8px;
@@ -155,6 +202,7 @@ td input[type="text"]:focus {
   font-weight: 500;
   font-family: monospace;
   font-size: 13px;
+  word-break: break-word;
 }
 
 .sem-nome {

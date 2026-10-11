@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renomeador de Declarações</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📄 Renomeador de Declarações</h1>
+      <p class="subtitulo">
+        Arraste seus PDFs abaixo. O nome do declarante será extraído automaticamente
+        e você poderá revisar antes de baixar.
+      </p>
+    </header>
+
+    <!-- Área de drop -->
+    <div id="dropzone" class="dropzone">
+      <p>🖱️ Arraste os PDFs aqui</p>
+      <p class="ou">ou</p>
+      <label class="botao-escolher">
+        Selecionar arquivos
+        <input type="file" id="arquivos" multiple accept=".pdf" hidden>
+      </label>
+    </div>
+
+    <!-- Barra de progresso -->
+    <div id="progresso-container" class="progresso-container oculto">
+      <div id="progresso-barra" class="progresso-barra"></div>
+      <span id="progresso-texto">0/0</span>
+    </div>
+
+    <!-- Tabela de resultados -->
+    <div id="tabela-container" class="oculto">
+      <div class="acoes-topo">
+        <button id="aprovar-todos" class="botao secundario">✅ Marcar todos</button>
+        <button id="desmarcar-todos" class="botao secundario">⬜ Desmarcar todos</button>
+      </div>
+
+      <table id="tabela">
+        <thead>
+          <tr>
+            <th class="col-check">✓</th>
+            <th>Arquivo original</th>
+            <th>Nome extraído (editável)</th>
+            <th>Novo nome</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="acoes-baixo">
+        <button id="baixar-zip" class="botao principal">
+          📦 Baixar renomeados (.zip)
+        </button>
+        <button id="limpar" class="botao secundario">🗑️ Limpar lista</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- pdf.js (Mozilla) via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.js"></script>
+  <!-- JSZip para gerar o .zip -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <script src="app.js"></script>
+</body>
+</html>

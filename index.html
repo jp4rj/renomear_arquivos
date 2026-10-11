@@ -5,15 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Renomeador de Declarações</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Aplica o tema ANTES da página pintar (evita "flash" branco) -->
+  <script>
+    (function() {
+      const temaSalvo = localStorage.getItem('tema');
+      if (temaSalvo === 'escuro') {
+        document.documentElement.setAttribute('data-tema', 'escuro');
+      } else if (temaSalvo === 'claro') {
+        document.documentElement.setAttribute('data-tema', 'claro');
+      }
+      // Se não tem preferência salva, o CSS usa o sistema automaticamente
+    })();
+  </script>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>📄 Renomeador de Declarações</h1>
-      <p class="subtitulo">
-        Arraste seus PDFs abaixo. O nome do declarante será extraído
-        automaticamente e você poderá revisar antes de baixar.
-      </p>
+      <div class="cabecalho-topo">
+        <div>
+          <h1>📄 Renomeador de Declarações</h1>
+          <p class="subtitulo">
+            Arraste seus PDFs abaixo. O nome do declarante será extraído
+            automaticamente e você poderá revisar antes de baixar.
+          </p>
+        </div>
+        <button id="btn-tema" class="botao-tema" title="Alternar tema claro/escuro" aria-label="Alternar tema">
+          <span class="icone-tema">🌙</span>
+        </button>
+      </div>
       <p id="aviso-libs" style="color:#b91c1c;font-weight:600;display:none;"></p>
     </header>
 
@@ -36,7 +55,7 @@
     <!-- Tabela -->
     <div id="tabela-container" class="oculto">
 
-      <!-- ✅ NOVO: barra de prefixo/sufixo global -->
+      <!-- Barra de prefixo/sufixo -->
       <div class="barra-afixos">
         <div class="campo-afixo">
           <label for="prefixo">Antes do nome:</label>
